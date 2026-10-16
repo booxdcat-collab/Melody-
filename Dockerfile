@@ -1,15 +1,24 @@
-FROM nikolaik/python-nodejs:python3.10-nodejs20
+FROM python:3.13-slim
 
-RUN curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
-    -o ffmpeg.tar.xz && \
-    tar -xJf ffmpeg.tar.xz && \
-    mv ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
-    mv ffmpeg-*-static/ffprobe /usr/local/bin/ && \
-    rm -rf ffmpeg*
+WORKDIR /app
 
-COPY . /app/
-WORKDIR /app/
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends ffmpeg curl unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://deno.land/install.sh | sh
 
-RUN pip3 install --no-cache-dir -r requirements.txt
+
+ENV DENO_INSTALL="/root/.deno"
+ENV PATH="${DENO_INSTALL}/bin:${PATH}"
+
+RUN curl -Ls https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --frozen
+
+COPY . .
 
 CMD ["bash", "start"]
